@@ -180,16 +180,19 @@ def is_prime(n):
     return True
 
 #function for creating a prime number
-#Source: https://www.youtube.com/watch?v=D_PfV_IcUdA
-def create_prime(min_val, max_val):
+def create_prime(min_val, max_val): #pick 2 integers between min and max
     prime = random.randint(min_val, max_val)
 
+    #check if the number is prime
     while not is_prime(prime):
         prime = random.randint(min_val, max_val)
 
     return prime
 
-def power(base, expo, m):
+#Function to compute large exponentiations under a modulus
+#Source: https://www.geeksforgeeks.org/computer-networks/rsa-algorithm-cryptography/
+#Original Source Code:
+"""def power(base, expo, m):
     res = 1
     base = base % m
     while expo > 0:
@@ -197,41 +200,77 @@ def power(base, expo, m):
             res = (res * base) % m
         base = (base * base) % m
         expo = expo // 2
+    return res"""
+
+def power(base, expo, m):
+    res = 1 #variable for result
+    base = base % m #base in modulo range
+    while expo > 0: #loop until base becomes 0
+        if expo & 1: #check if least significant bit is 1
+            res = (res * base) % m #if it is multiply the current res by base
+        base = (base * base) % m #each time square the base  move to the next binary bit of the exponent
+        expo = expo // 2 #shifts the exponent one bit to the right
     return res
 
 
-#Source: https://www.geeksforgeeks.org/computer-networks/rsa-algorithm-cryptography/
-def mod_inverse(e, phi):
-    g, x, _ = egcd(e, phi)
+#Function to use the egcd
+#x is the modular inverse of e mod φ
+#O(log φ) time
+#RSA encryption implementations use in practice because RSA numbers can be hundreds of digits long
+#function’s goal is to find the modular inverse of e under phi
+#compute the private key exponent
+#Original Source Code for inspiration
+"""def modinv(a, m):
+    g, x, y = egcd(a, m)
     if g != 1:
-        raise ValueError("mod_inverse does not exist")
+        raise Exception('modular inverse does not exist')
+    else:
+        return x % m"""
+
+#e is the public exponent
+#phi is the modulus
+def mod_inverse(e, phi):
+    g, x, _ = egcd(e, phi) #call egcd
+    #if g = 1 it means e and phi are coprime
+    if g != 1: #check if g is equal to 1
+        raise ValueError("mod_inverse does not exist") #if e and phi aren't coprime it is impossible to find d
     return x % phi
 
 
-
-
+#generate RSA public and private keys
 def create_keys():
-    e_preferred = 65537
-    while True:
-        p = create_prime(5000, 90000)
+    e_preferred = 65537 # constant public exponent
+    while True: #infinite loop that keeps generating primes until a valid RSA key pair is found
+        p = create_prime(5000, 90000) #generating 2 random prime numbers
         q = create_prime(5000, 90000)
-        while p == q:
+        while p == q: #p and q cannot be equal so change q
             q = create_prime(5000, 90000)
 
+        #calculate the modulus
         n = p * q
-        phi = (p - 1) * (q - 1)
+        phi = (p - 1) * (q - 1) #Euler’s totient function
 
-        e = e_preferred
-        if gcd(e, phi) == 1:
-            try:
-                d = mod_inverse(e, phi)
-                return (e, n), (d, n), (p, q)
+        e = e_preferred #public key
+        if gcd(e, phi) == 1: #check if e and phi are coprime
+            try: #try block used because sometimes the mathematical step of finding d can fail
+                d = mod_inverse(e, phi) #compute d
+                return (e, n), (d, n), (p, q) #return keys and primes
             except ValueError:
-                # very rare; try new primes
+                # try new primes
                 pass
-        # else loop again
 
 
+#Source: https://stackoverflow.com/questions/4798654/modular-multiplicative-inverse-function-in-python
+#Original Source Code for Inspiration:
+"""def egcd(a, b):
+    if a == 0:
+        return (b, 0, 1)
+    else:
+        g, y, x = egcd(b % a, a)
+        return (g, x - (b // a) * y, y)"""
+
+#Euclidean algorithm finds the greatest common divisor of two numbers a and b
+#this also finds two coefficients x and y such that a×x+b×y= greates common divisors
 def egcd(a, b):
     if b == 0:
         return (a, 1, 0)
@@ -239,30 +278,26 @@ def egcd(a, b):
     return (g, y1, x1 - (a // b) * y1)
 
 
-
+#encrypt the message using rsa public key
 def encrypt_rsa(m, e, n):
     return power(m, e, n)
 
-
+#decrypt cipher text using private key
 def decrypt_rsa(c, d, n):
     return power(c, d, n)
 
 
-
-
-
-
 def rsa_encrypt_key(key_plaintext, public_key):
 
-    #Encrypted the Vigenere key (string) character-by-character using RSA.
-    #Returns a list of integers (cipher blocks).
+    #Encrypted the Vigenere key (string) character-by-character using RSA
+    #Returns a list of integers (cipher blocks)
 
     e, n = public_key
     cipher_blocks = []
     for ch in key_plaintext:
-        m = ord(ch)  # 0..255 for typical ASCII/UTF-8 single-byte chars
+        m = ord(ch)
         if m >= n:
-            # With our prime ranges, n will be huge compared to ord(ch), so this won't happen.
+            # With prime ranges, n will be huge compared to ord(ch), so this won't happen.
             raise ValueError("Plaintext block too large for RSA modulus")
         cipher_blocks.append(encrypt_rsa(m, e, n))
     return cipher_blocks
@@ -280,15 +315,15 @@ def rsa_decrypt_key(cipher_blocks, private_key):
     return ''.join(chars)
 
 
-# End-to-end flows demonstrating “RSA-encrypted Vigenère key”
+# End-to-end flows demonstrating RSA-encrypted Vigenere key
 
 def package_for_sender(message, vig_key_plain, public_key):
 
     #Sender side:
-    #Encrypted the message with Vigenere using the plaintext key.
-    #RSA-encrypted the Vigenere key using the receiver public key.
-    #Returned (vig_ciphertext, rsa_encrypted_key_blocks).
-    #The sender never transmits the Vigenère key in plaintext.
+    #Encrypted the message with Vigenere using the plaintext key
+    #RSA-encrypted the Vigenere key using the receiver public key
+    #Returned (vig_ciphertext, rsa_encrypted_key_blocks)
+    #The sender never transmits the Vigenère key in plaintext
 
     vig_ciphertext = encrypt_vignere(message, vig_key_plain)
     rsa_key_blocks = rsa_encrypt_key(vig_key_plain, public_key)
@@ -298,9 +333,9 @@ def package_for_sender(message, vig_key_plain, public_key):
 def unpack_for_receiver(vig_ciphertext, rsa_key_blocks, private_key):
 
     #Receiver side:
-    #RSA-decrypted the Vigenere key using the receiver’s private key.
-    #Used the recovered key to Vigenere-decrypt the message.
-    #Returned the recovered plaintext.
+    #RSA-decrypted the Vigenere key using the receiver’s private key
+    #Used the recovered key to Vigenere-decrypt the message
+    #Returned the recovered plaintext
 
     recovered_key = rsa_decrypt_key(rsa_key_blocks, private_key)
     plaintext = decrypt_vignere(vig_ciphertext, recovered_key)
