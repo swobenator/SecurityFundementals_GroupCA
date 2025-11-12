@@ -77,3 +77,51 @@ function decryptVigenere(ciphertext, key) {
   // Join the decrypted characters into a final string
   return out.join('');
 }
+
+// ===== RSA Key Decryption ===== Edvin Krasovski
+function rsaDecryptKeyBlocks(cipherBlocks, privateKey) {
+    //Extract private exponent (d) and modulus (n) from the private key
+    const { d, n } = privateKey;
+    //Initialize an empty array to store decrypted character codes
+    let chars = [];
+    //Iterate through each encrypted block in the cipherBlocks array
+    for (let c of cipherBlocks) {
+        //Convert the cipher block to BigInt for modular arithmetic
+        const cBig = BigInt(c);
+        //Perform RSA decryption: m = c^d mod n
+        const m = modPow(cBig, d, n);
+        //Convert the decrypted numeric value to a character and store it
+        chars.push(String.fromCharCode(Number(m)));
+    }
+    //Join all decrypted characters into a single string and return it
+    return chars.join('');
+}
+
+// ===== DOM Helpers ===== Edvin Krasovski
+const messageList = document.getElementById('messageList');
+
+function appendMessage(text, cls='other') {
+    //Create a new div element for the message
+    const d = document.createElement('div');
+    //Assign the message CSS class (default is 'other')
+    d.className = 'msg ' + cls;
+    //Set the message text content
+    d.textContent = text;
+    //Append the message element to the message list
+    messageList.appendChild(d);
+    //Scroll to the bottom to show the latest message
+    messageList.scrollTop = messageList.scrollHeight;
+}
+
+function appendSystem(text) {
+    //Create a new div element for the system message
+    const d = document.createElement('div');
+    //Assign the 'system' CSS class for system messages
+    d.className = 'msg system';
+    //Set the system message text content
+    d.textContent = text;
+    //Append the system message to the message list
+    messageList.appendChild(d);
+    //Scroll to the bottom to ensure visibility of the latest message
+    messageList.scrollTop = messageList.scrollHeight;
+}
