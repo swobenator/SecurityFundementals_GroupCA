@@ -125,3 +125,77 @@ function appendSystem(text) {
     //Scroll to the bottom to ensure visibility of the latest message
     messageList.scrollTop = messageList.scrollHeight;
 }
+
+
+// ===== Socket.IO connection ===== Soheib Ameur
+// Establish a connection between the client and the Flask Socket.IO server
+const socket = io.connect(SERVER_URL);
+
+// Event listener triggered when the connection to the server is successfully established
+socket.on('connect', () => appendSystem("Connected to server."));
+
+// Event listener triggered when the client is disconnected from the server
+socket.on('disconnect', () => appendSystem("Disconnected."));
+
+// ===== Private Key Handling ===== Soheib Ameur
+// The RSA private key is automatically provided by the server and injected into the global variable
+// window.SERVER_PRIVATE_KEY (passed from Flask template context).
+// This allows the client to perform RSA decryption without user interaction.
+let PRIVATE_KEY = {
+  d: BigInt(window.SERVER_PRIVATE_KEY.d),  // RSA private exponent (used for decryption)
+  n: BigInt(window.SERVER_PRIVATE_KEY.n)   // RSA modulus (product of two primes)
+};
+
+// ===== Receive Encrypted Messages ===== Edvin Krasovski
+// This listener waits for messages sent from the server under the event name defined in EVENT_RECEIVE.
+// The message payload includes the Vigenere ciphertext and RSA-encrypted key blocks.
+socket.on(EVENT_RECEIVE, data => {
+  try {
+    // Extract the encrypted message and RSA key blocks from thepayload
+    const vig_cipher = data.vig_ciphertext;     // The Vigenere-encrypted message
+    const rsa_blocks = data.rsa_key_blocks;     // RSA-encrypted Vigenère key (as list of integers)
+
+    // Step 1: Dcrypt the RSA blocks using the local private key
+    // This recovers the original plaintext Vigenère key
+    const vig_key_plain = rsaDecryptKeyBlocks(rsa_blocks, PRIVATE_KEY);
+
+    // Step 2: Use the recovered Vigenère key to decrypt the ciphertext
+    // produces the readable plaintext message
+    const plaintext = decryptVigenere(vig_cipher, vig_key_plain);
+
+    // Display both the encrypted and decrypted versions in the chat window for comparison
+    appendMessage("Encrypted: " + vig_cipher, 'other');
+    appendMessage("Decrypted: " + plaintext, 'other');
+  } catch (e) {
+    // If decryption fails (invalid key or malformed data), show an error
+    appendSystem("Decryption error.");
+  }
+});
+
+// ===== Send Plaintext Messages ===== Soheib Ameur
+// Locate the "Send" button and attach an event listener for click events
+const sendBtn = document.getElementById('sendBtn');
+sendBtn.addEventListener('click', () => {
+  // Retrieve the message from the input field and trim any extra spaces
+  const msg = document.getElementById('messageInput').value.trim();
+
+  // Do nothing if the message is empty
+  if (!msg) return;
+
+  // Emit the message to the server through theEVENT_SEND channel
+  // The server handles encryption and broadcasts it to all clients
+  socket.emit(EVENT_SEND, { message: msg });
+
+  // Immediately show the user's own message in the chat window
+  appendMessage(msg, 'you');
+
+  // Clear the input box after sending
+  document.getElementById('messageInput').value = '';
+});
+
+// ===== Keyboard Shortcut for Sending ===== Soheib Ameur
+// Adds a keyboard shortcut: pressing Ctrl +Enter (or Cmd+Enter on macOS)
+// sends the message without clicking the Send button manually
+document.getElementById('messageInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) sendBtn.click();
+});
