@@ -25,3 +25,55 @@ function modPow(base, exponent, modulus) {
     //Return the final modular exponentiation result
     return result;
 }
+
+
+// ===== Vigenère Decryption ===== Soheib Ameur
+function createKey(message, key) {
+  // If the key is already long enough, trim it
+  if (key.length >= message.length) return key.slice(0, message.length);
+
+  // Convert the key into an array of characters
+  let result = key.split('');
+  const originalLength = key.length;
+  let i = 0;
+
+  // Repeat key characters cyclically until it matches message length
+  while (result.length < message.length) {
+    result.push(key[i % originalLength]);
+    i++;
+  }
+
+  // Join array back into a single string and return
+  return result.join('');
+}
+
+function decryptVigenere(ciphertext, key) {
+  // Extend or trim the key to match the ciphertext length
+  const keyStream = createKey(ciphertext, key);
+  let out = [];
+
+  // Loop through each character in the ciphertext
+  for (let i = 0; i < ciphertext.length; i++) {
+    const ch = ciphertext[i];           // Current ciphertext character
+    const kch = keyStream[i].toUpperCase(); // Corresponding key character (converted to uppercase)
+
+    // If character is uppercase letter (A–Z)
+    if (ch >= 'A' && ch <= 'Z') {
+      const a = ch.charCodeAt(0) - 65;  // Convert letter to 0–25 index
+      const b = kch.charCodeAt(0) - 65; // Convert key letter to 0–25 index
+      // Perform reverse Caesar shift (subtract key value)
+      out.push(String.fromCharCode((a - b + 26) % 26 + 65));
+
+    // If character is lowercase letter (a–z)
+    } else if (ch >= 'a' && ch <= 'z') {
+      const a = ch.charCodeAt(0) - 97;
+      const b = kch.charCodeAt(0) - 65; // still uppercase for consistency
+      out.push(String.fromCharCode((a - b + 26) % 26 + 97));
+
+    // If character is non-alphabetic (spaces, punctuation, numbers), keep as is
+    } else out.push(ch);
+  }
+
+  // Join the decrypted characters into a final string
+  return out.join('');
+}
