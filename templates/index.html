@@ -95,5 +95,14 @@
       <button id="sendBtn" type="button">Send</button>
     </form>
   </div>
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+  <script>
+    window.SERVER_PRIVATE_KEY = {
+      d: "{{ private_key_d }}",
+      n: "{{ private_key_n }}"
+    };
+  </script>
+
+  <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
 </html>
