@@ -12,18 +12,20 @@ VIG_KEY = "Bogdan"
 
 @app.route('/')
 def index():
-    return render_template('index.html', private_key_d=private[0], private_key_n=private[1]                           )
+    return render_template('index.html', private_key_d=private[0], private_key_n=private[1])
 
 
 @socketio.on('send_message')
 def handle_send(data):
     msg = data.get('message', '')
+    username = data.get('username', 'Anonymous')
 
     vig_cipher, rsa_blocks = crypto.package_for_sender(msg, VIG_KEY, public)
 
     emit('receive_message', {
         "vig_ciphertext": vig_cipher,
-        "rsa_key_blocks": rsa_blocks
+        "rsa_key_blocks": rsa_blocks,
+        "username": username
     }, broadcast=True)
 
 
