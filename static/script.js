@@ -3,6 +3,14 @@ const SERVER_URL = "http://localhost:3000";
 const EVENT_SEND = "send_message";
 const EVENT_RECEIVE = "receive_message";
 
+
+// ===== Username Setup ===== Soheib Ameur
+// Prompt the user for a username as soon as they load the page
+let USERNAME = prompt("Enter your username:");
+if (!USERNAME || USERNAME.trim() === "") {
+  USERNAME = "Anonymous"; // Default if user leaves it blank
+}
+
 // ===== Utility: Modular exponentiation (RSA) ===== Edvin Krasovski
 function modPow(base, exponent, modulus) {
     //Converts inputs to BigInt and reduces base modulo modulus
@@ -100,13 +108,27 @@ function rsaDecryptKeyBlocks(cipherBlocks, privateKey) {
 // ===== DOM Helpers ===== Edvin Krasovski
 const messageList = document.getElementById('messageList');
 
-function appendMessage(text, cls='other') {
+function appendMessage(text, cls='other', username = 'Anonymous') {
     //Create a new div element for the message
     const d = document.createElement('div');
     //Assign the message CSS class (default is 'other')
     d.className = 'msg ' + cls;
+
+    // Add username label above the message
+    const nameElem = document.createElement('div');
+    nameElem.style.fontWeight = 'bold';
+    nameElem.style.fontSize = '0.85em';
+    nameElem.textContent = username;
+
+    const msgElem = document.createElement('div');
+
     //Set the message text content
-    d.textContent = text;
+    msgElem.textContent = text;
+
+    d.appendChild(nameElem);
+    d.appendChild(msgElem);
+
+    //d.textContent = text;
     //Append the message element to the message list
     messageList.appendChild(d);
     //Scroll to the bottom to show the latest message
@@ -154,6 +176,7 @@ socket.on(EVENT_RECEIVE, data => {
     // Extract the encrypted message and RSA key blocks from thepayload
     const vig_cipher = data.vig_ciphertext;     // The Vigenere-encrypted message
     const rsa_blocks = data.rsa_key_blocks;     // RSA-encrypted Vigenère key (as list of integers)
+    const sender = data.username || "Anonymous"; // Username sent from the server
 
     // Step 1: Dcrypt the RSA blocks using the local private key
     // This recovers the original plaintext Vigenère key
@@ -164,8 +187,8 @@ socket.on(EVENT_RECEIVE, data => {
     const plaintext = decryptVigenere(vig_cipher, vig_key_plain);
 
     // Display both the encrypted and decrypted versions in the chat window for comparison
-    appendMessage("Encrypted: " + vig_cipher, 'other');
-    appendMessage("Decrypted: " + plaintext, 'other');
+    appendMessage("Encrypted: " + vig_cipher, 'other', sender);
+    appendMessage("Decrypted: " + plaintext, 'other', sender);
   } catch (e) {
     // If decryption fails (invalid key or malformed data), show an error
     appendSystem("Decryption error.");
@@ -184,10 +207,10 @@ sendBtn.addEventListener('click', () => {
 
   // Emit the message to the server through theEVENT_SEND channel
   // The server handles encryption and broadcasts it to all clients
-  socket.emit(EVENT_SEND, { message: msg });
+  socket.emit(EVENT_SEND, { message: msg, username: USERNAME });
 
   // Immediately show the user's own message in the chat window
-  appendMessage(msg, 'you');
+  appendMessage(msg, 'you', USERNAME);
 
   // Clear the input box after sending
   document.getElementById('messageInput').value = '';
