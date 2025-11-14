@@ -1,3 +1,4 @@
+#Author: Soheib Ameur
 # Impors Flask for web framework and render_template for serving HTML pages
 from flask import Flask, render_template
 # Imports SocketIO for real-time communication and emit for event handling
@@ -52,3 +53,4 @@ if __name__ == '__main__':
     # The app runs locally on port 3000 with debugging enabled
     #'allow_unsafe_werkzeug=True' bypasses a safety restriction for dev use only
     socketio.run(app, host='localhost', port=port, debug=True, allow_unsafe_werkzeug=True)
+
